@@ -1,1 +1,28 @@
+# Ambientes Virtuais
+.venv/
+venv/
+env/
+
+# Cache do Python
+*.py[cod]
+__pycache__/
+
+# Arquivos de IDE
+.idea/
+.vscode/
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
+
+# Logs e arquivos de segredos
+*.log
 .env
+*.env
+secrets.toml
+config.ini
+
+# Pacotes e dependências
+build/
+dist/
+*.egg-info/
