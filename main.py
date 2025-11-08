@@ -1,59 +1,73 @@
+import asyncio
+import os
 from dotenv import load_dotenv
+from google.adk.agents import Agent
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types
+from tools import flights, hotels, activities, weather
 
-# Carrega as variáveis do .env ANTES de importar os agentes
+# === CONFIGURAÇÃO ===
 load_dotenv()
+API_KEY = os.getenv("GOOGLE_API_KEY")
+if not API_KEY:
+    raise RuntimeError("GOOGLE_API_KEY não definido no .env")
+os.environ["GOOGLE_API_KEY"] = API_KEY
 
-# Agora o restante das importações
-from agents.flight_agent import FlightAgent
-from agents.hotel_agent import HotelAgent
-from agents.activities_agent import ActivitiesAgent
-from agents.integration_agent import IntegrationAgent
-from environment import TravelEnvironment
+booking_integrator = Agent(
+    name="travel_planner_agent",
+    model="gemini-2.5-flash",
+    description="Agente de viagens real que busca voos, hotéis, clima e atividades com APIs públicas.",
+    tools=[
+        flights.get_flight_options,
+        hotels.get_hotel_options,
+        activities.get_activities,
+        weather.get_weather_forecast
+    ],
+)
 
-def main():
-    print("=== SISTEMA DE RESERVA DE VIAGENS INTELIGENTE ===\n")
+# === LOOP PRINCIPAL ===
+async def main():
+    APP_NAME = "travel_planner_app"
+    USER_ID = "user_1"
+    SESSION_ID = "session_1"
 
-    # --- INPUTS MELHORADOS ---
-    origem_iata = input("Digite o CÓDIGO IATA de origem (ex: CWB, GRU): ").upper()
-    destino_iata = input("Digite o CÓDIGO IATA de destino (ex: GIG, CDG): ").upper()
-    
-    # Input separado para os agentes que não usam IATA
-    cidade_destino_nome = input(f"Digite o nome da cidade de destino (ex: Rio de Janeiro): ")
-    
-    data = input("Digite a data da viagem (YYYY-MM-DD): ")
-    
-    try:
-        orcamento = float(input("Digite o orçamento total disponível (em R$): "))
-    except ValueError:
-        print("Orçamento inválido. Usando R$ 5000.00 como padrão.")
-        orcamento = 5000.0
-        
-    perfil = input("Digite o perfil do viajante (romântico, aventura, cultural, etc): ")
+    session_service = InMemorySessionService()
+    await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID)
 
-    # Cria o ambiente compartilhado
-    env = TravelEnvironment()
+    runner = Runner(agent=booking_integrator, app_name=APP_NAME, session_service=session_service)
 
-    try:
-        # Cria os agentes
-        # O erro acontecia aqui, pois load_dotenv() não tinha sido chamado
-        flight_agent = FlightAgent(env)
-        hotel_agent = HotelAgent(env)
-        activities_agent = ActivitiesAgent(env)
-        integration_agent = IntegrationAgent(env)
+    print("🌍 Bem-vindo ao Agente de Viagens Inteligente ✈️\n")
+    print("Digite sua solicitação (ex: 'Planeje uma viagem de Curitiba a Paris de 10 a 15 de novembro com orçamento 400 reais e foco cultural')\n")
+    print("Digite 'sair' para encerrar.\n")
 
-        # Executa os agentes com os parâmetros corretos
-        flight_agent.run(origem_iata, destino_iata, data)
-        hotel_agent.run(cidade_destino_nome, orcamento)
-        activities_agent.run(cidade_destino_nome, perfil)
-        integration_agent.run()
+    while True:
+        user_prompt = input("🧳 Você: ").strip()
+        if user_prompt.lower() in ["sair", "exit", "quit"]:
+            print("👋 Encerrando sessão. Boa viagem!")
+            await runner.close()
+            break
 
-        print("\n=== VIAGEM PLANEJADA COM SUCESSO ===")
+        content = types.Content(role="user", parts=[types.Part(text=user_prompt)])
+        print("\n🤖 Agente está processando...\n")
 
-    except ValueError as e:
-        # Esta é a mensagem de erro que você viu
-        print(f"\nERRO CRÍTICO: {e}")
-        print("Verifique se suas chaves de API estão corretas no arquivo .env")
+        # Executa o agente
+        async for event in runner.run_async(
+            user_id=USER_ID,
+            session_id=SESSION_ID,
+            new_message=content
+        ):
+            # Funções chamadas pelo modelo
+            function_calls = getattr(event, "function_calls", None)
+            if function_calls:
+                for call in function_calls:
+                    print(f"🧩 [DEBUG] Chamando ferramenta: {call.name}({call.args})")
 
+            # Texto retornado pelo modelo
+            if hasattr(event, "content") and event.content and event.content.parts:
+                for part in event.content.parts:
+                    if hasattr(part, "text") and part.text:
+                        print(f"📋 {part.text}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
