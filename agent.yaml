@@ -1,11 +1,13 @@
 name: travel_planner
 description: "Agente que planeja viagens personalizadas"
-entrypoint: main:booking_integrator_agent
+# O entrypoint é o agente único
+entrypoint: main:booking_integrator
 llm:
   model: gemini-2.5-flash
   temperature: 0.7
+# As ferramentas do agente único
 tools:
   - flights.get_flight_options
   - hotels.get_hotel_options
-  - activities.get_activities
-  - weather.get_weather_forecast
+  - recommendations.get_recommendations
+  - weather.get_historical_average_weather
