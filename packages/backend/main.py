@@ -15,8 +15,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from fastapi.responses import StreamingResponse
+from fastapi.responses import Response # <--- ADICIONE ISTO
 
-# === CONFIGURAÇÃO INICIAL ===
+# Novas importações para PDF
+import markdown_it
+from weasyprint import HTML, CSS
+
+# === CONFIGURAÇÃO INICIAL (Sem alteração) ===
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 if not API_KEY:
@@ -25,7 +30,7 @@ os.environ["GOOGLE_API_KEY"] = API_KEY
 
 today_str = datetime.now().strftime("%Y-%m-%d")
 
-# === INSTRUÇÕES DO AGENTE ===
+# === INSTRUÇÕES DO AGENTE (Sem alteração) ===
 agent_instructions = f"""
 Você é um Coordenador de Viagens de elite. A data de HOJE é: {today_str}.
 
@@ -44,7 +49,7 @@ Ao final, compile TODAS as informações (voos, hotéis, atividades e clima) em 
 Seja claro e organizado.
 """
 
-# === INICIALIZAÇÃO DO AGENTE E SERVIÇOS ===
+# === INICIALIZAÇÃO DO AGENTE (Sem alteração) ===
 booking_integrator = LlmAgent(
     name="travel_planner",
     model="gemini-2.5-flash",
@@ -60,7 +65,7 @@ booking_integrator = LlmAgent(
 
 session_service = InMemorySessionService()
 
-# === DEFINIÇÃO DA API ===
+# === DEFINIÇÃO DA API (Sem alteração) ===
 app = FastAPI()
 
 origins = [
@@ -76,7 +81,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Modelo de dados Pydantic
 class TravelRequest(BaseModel):
     origin: str
     destination: str
@@ -92,7 +96,7 @@ class TravelRequest(BaseModel):
             raise ValueError('O orçamento não pode ser negativo')
         return v
 
-
+# === STREAMING (Sem alteração) ===
 async def stream_plan_response(request: TravelRequest) -> AsyncGenerator[str, None]:
     APP_NAME = "travel_planner"
     USER_ID = "user_api" 
@@ -147,10 +151,56 @@ async def stream_plan_response(request: TravelRequest) -> AsyncGenerator[str, No
         print("--- STREAM CONCLUÍDA ---")
 
 
-# Endpoint principal da API
 @app.post("/generate-plan")
 async def generate_plan(request: TravelRequest):
     return StreamingResponse(stream_plan_response(request), media_type="text/event-stream")
 
-# --- Para rodar o servidor ---
-# Use o comando: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+PDF_CSS = """
+@page { 
+    size: A4; 
+    margin: 2cm; 
+}
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    font-size: 11pt; 
+    line-height: 1.6; 
+}
+h1, h2, h3 { 
+    font-weight: 600; 
+    margin-top: 1.5em; 
+    margin-bottom: 0.5em; 
+}
+h1 { font-size: 24pt; }
+h2 { font-size: 18pt; border-bottom: 1px solid #eaeaea; padding-bottom: 5px; }
+h3 { font-size: 14pt; }
+p { margin-bottom: 1em; }
+ul, ol { padding-left: 1.5em; margin-bottom: 1em; }
+li { margin-bottom: 0.5em; }
+a { color: #007bff; text-decoration: none; }
+"""
+
+class PlanDownloadRequest(BaseModel):
+    plan: str
+
+@app.post("/download-plan")
+async def download_plan(request: PlanDownloadRequest):
+    try:
+        # Converte a string Markdown para HTML
+        md = markdown_it.MarkdownIt()
+        html_content = md.render(request.plan)
+        
+        # Junta o HTML com o CSS
+        full_html = f"<html><head><style>{PDF_CSS}</style></head><body>{html_content}</body></html>"
+        
+        # Gera o PDF em memória
+        pdf_bytes = HTML(string=full_html).write_pdf()
+        
+        # Devolve o ficheiro PDF
+        return Response(
+            content=pdf_bytes, 
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=plano-de-viagem.pdf"}
+        )
+    except Exception as e:
+        print(f"❌ Erro ao gerar PDF: {e}")
+        return Response(status_code=500, content=f"Erro ao gerar PDF: {e}")

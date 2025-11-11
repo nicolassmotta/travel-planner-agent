@@ -3,10 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 import ReactMarkdown from "react-markdown"; 
-import jsPDF from "jspdf"; 
-import html2canvas from "html2canvas";
 import { useRef } from "react"; 
 
 import {
@@ -24,13 +21,12 @@ interface TravelPlanProps {
 
 function parsePlanToSections(plan: string) {
   const sections = plan.split('### '); 
-  
   const intro = sections[0].trim(); 
   
   const mappedSections = sections.slice(1).map((sectionText) => {
     const parts = sectionText.split('\n'); 
     const title = parts[0].trim(); 
-    const content = parts.slice(1).join('\n').trim(); 
+    const content = parts.slice(1).join('\n').trim();
     return { title, content };
   });
 
@@ -41,34 +37,41 @@ function parsePlanToSections(plan: string) {
 const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
   const { toast } = useToast();
   const planContentRef = useRef<HTMLDivElement>(null);
-
-  const handleDownload = () => {
-    if (!planContentRef.current) {
-      toast({ title: "Erro ao baixar", variant: "destructive" });
+  const handleDownload = async () => {
+    if (!plan) {
+      toast({ title: "Erro ao baixar", description: "Não há plano para baixar.", variant: "destructive" });
       return;
     }
     toast({ title: "Gerando PDF..." });
 
-    html2canvas(planContentRef.current, { 
-      scale: 2,
-      backgroundColor: "#ffffff" 
-    }).then((canvas) => {
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/download-plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: plan }) 
+      });
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 15; 
+      if (!response.ok) {
+        throw new Error("Falha ao gerar o PDF no servidor.");
+      }
 
-      pdf.addImage(imgData, "PNG", imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      pdf.save("plano-de-viagem.pdf");
-    });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "plano-de-viagem.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Erro ao baixar PDF:", error);
+      toast({ title: "Erro ao baixar PDF", description: (error as Error).message, variant: "destructive" });
+    }
   };
+  // --- FIM DA ATUALIZAÇÃO ---
 
   const handleShare = async () => {
     if (!plan) return;
@@ -128,7 +131,7 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
           size="sm"
           onClick={handleDownload}
           className="flex-1"
-          disabled={isLoading} 
+          disabled={isLoading || !plan} 
         >
           <Download className="w-4 h-4 mr-2" />
           Baixar PDF
@@ -138,12 +141,14 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
           size="sm"
           onClick={handleShare}
           className="flex-1"
-          disabled={isLoading} 
+          disabled={isLoading || !plan} 
         >
           <Share2 className="w-4 h-4 mr-2" />
           Compartilhar
         </Button>
       </div>
+
+      {/* A div de referência não é mais necessária para o PDF, mas mantemos para o layout */}
       <div ref={planContentRef} className="p-6">
         <div className="prose prose-sm max-w-none dark:prose-invert">
           <ReactMarkdown
@@ -156,6 +161,7 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
             {intro}
           </ReactMarkdown>
         </div>
+
         <Accordion type="multiple" defaultValue={sections.map(s => s.title)} className="w-full mt-4">
           {sections.map((section, index) => (
             <AccordionItem value={section.title} key={index} className={cn(index === 0 && "border-t")}>
