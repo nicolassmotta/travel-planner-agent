@@ -10,7 +10,6 @@ import { Card } from "@/components/ui/card";
 import { Calendar, Loader2, MapPin, DollarSign, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Pega a data de hoje no formato "YYYY-MM-DD"
 const today = new Date().toISOString().split('T')[0];
 
 const formSchema = z.object({
@@ -21,8 +20,14 @@ const formSchema = z.object({
       message: "A data de ida não pode ser no passado."
     }),
   returnDate: z.string().optional(),
-  totalBudget: z.string().min(1, "Informe o orçamento total"),
-  nightlyBudget: z.string().min(1, "Informe o orçamento por noite"),
+  totalBudget: z.preprocess(
+    (val) => (val === "" ? 0 : Number(val)), 
+    z.number().min(0, "O orçamento deve ser um número positivo")
+  ),
+  nightlyBudget: z.preprocess(
+    (val) => (val === "" ? 0 : Number(val)), 
+    z.number().min(0, "O orçamento deve ser um número positivo")
+  ),
   preferences: z.string().min(10, "Descreva suas preferências (mínimo 10 caracteres)"),
 }).refine(data => {
   if (!data.returnDate) return true;
@@ -32,15 +37,12 @@ const formSchema = z.object({
   path: ["returnDate"], 
 });
 
-// --- MUDANÇA 1: Exportamos o type para usá-lo em outros arquivos ---
 export type FormData = z.infer<typeof formSchema>;
 
 interface TravelFormProps {
-  // --- MUDANÇA 2: Atualizamos onPlanGenerated para enviar os dados do form ---
   onPlanGenerated: (plan: string, data: FormData) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
-  // Adicionamos uma prop para preencher o formulário com dados salvos
   initialData?: FormData;
   setTravelPlan: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -62,25 +64,29 @@ const TravelForm = ({
     watch
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    // Definimos os valores iniciais do formulário (útil para o "Notebook")
-    defaultValues: initialData,
+    defaultValues: initialData || {
+      origin: '',
+      destination: '',
+      departureDate: '',
+      returnDate: '',
+      totalBudget: 0,
+      nightlyBudget: 0,
+      preferences: '',
+    },
   });
 
   const departureDate = watch("departureDate");
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
-    setTravelPlan(null); // Limpa o plano anterior
+    setTravelPlan(null);
     
-    let fullPlan = ""; // Acumulador para o plano completo
+    let fullPlan = ""; 
 
-    // --- MUDANÇA DA MELHORIA 2 ---
-    // Lê o URL do .env, com um fallback para o localhost
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
-    // --- FIM DA MUDANÇA ---
 
     try {
-      const response = await fetch(`${apiUrl}/generate-plan`, { // <--- URL ATUALIZADO
+      const response = await fetch(`${apiUrl}/generate-plan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -89,11 +95,10 @@ const TravelForm = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json(); // Tenta ler o erro como JSON
+        const errorData = await response.json();
         throw new Error(errorData.error || "Falha na comunicação com o servidor");
       }
 
-      // --- LÓGICA DE STREAMING ---
       if (!response.body) {
         throw new Error("A resposta da API não continha um corpo.");
       }
@@ -105,16 +110,14 @@ const TravelForm = ({
         const { done, value } = await reader.read();
         
         if (done) {
-          break; // Stream terminada
+          break;
         }
         
         const chunk = decoder.decode(value);
         fullPlan += chunk;
-        setTravelPlan(fullPlan); // Atualiza o estado em tempo real
+        setTravelPlan(fullPlan);
       }
-      // --- FIM DA LÓGICA DE STREAMING ---
 
-      // Quando a stream termina, guardamos o plano completo no Local Storage
       onPlanGenerated(fullPlan, data); 
       
       toast({
@@ -137,7 +140,6 @@ const TravelForm = ({
   return (
     <Card className="p-6 shadow-[var(--shadow-elevated)]">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* ... (O resto do seu formulário (JSX) não muda nada) ... */}
         {/* Step Indicator */}
         <div className="flex items-center justify-between mb-8">
           {[1, 2, 3].map((s) => (
@@ -151,8 +153,6 @@ const TravelForm = ({
             </div>
           ))}
         </div>
-
-        {/* Step 1: Destino e Datas */}
         {step === 1 && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div>
@@ -196,6 +196,7 @@ const TravelForm = ({
                 <Input 
                   id="departureDate"
                   type="date"
+                  min={today}
                   {...register("departureDate")}
                   className="mt-1.5"
                 />
@@ -213,11 +214,13 @@ const TravelForm = ({
                 <Input 
                   id="returnDate"
                   type="date"
-                  min={departureDate}
+                  min={departureDate || today}
                   {...register("returnDate")}
                   className="mt-1.5"
                 />
-                <p className="text-xs text-muted-foreground mt-1">Opcional</p>
+                {errors.returnDate && (
+                  <p className="text-sm text-destructive mt-1">{errors.returnDate.message}</p>
+                )}
               </div>
             </div>
 
@@ -230,8 +233,6 @@ const TravelForm = ({
             </Button>
           </div>
         )}
-
-        {/* Step 2: Orçamento */}
         {step === 2 && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div>
@@ -290,8 +291,6 @@ const TravelForm = ({
             </div>
           </div>
         )}
-
-        {/* Step 3: Preferências */}
         {step === 3 && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div>

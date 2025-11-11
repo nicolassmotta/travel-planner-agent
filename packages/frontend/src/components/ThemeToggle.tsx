@@ -1,9 +1,5 @@
 import { Moon, Sun } from "lucide-react"
-// --- CORREÇÃO AQUI ---
-// Importamos o 'useTheme' do nosso NOVO arquivo de hook
 import { useTheme } from "@/hooks/use-theme"
-// --- FIM DA CORREÇÃO ---
-
 import { Button } from "@/components/ui/button"
 
 export function ThemeToggle() {

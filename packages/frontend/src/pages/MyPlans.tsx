@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// --- CORREÇÃO AQUI ---
-// Exportamos o type aqui e importamos ele no Index
 import { type FormData } from "@/components/TravelForm"; 
+
 export type SavedTravelPlan = {
   id: string;
   formData: FormData;
   plan: string;
 };
-// --- FIM DA CORREÇÃO ---
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,8 +36,6 @@ const MyPlans = () => {
   }, []);
 
   const handleLoadPlan = (plan: SavedTravelPlan) => {
-    // --- CORREÇÃO AQUI ---
-    // Passamos o ID junto com o resto dos dados
     navigate("/", { state: { id: plan.id, formData: plan.formData, plan: plan.plan } });
   };
 
@@ -90,8 +86,6 @@ const MyPlans = () => {
                 <CardFooter className="flex justify-end gap-2">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      {/* --- CORREÇÃO AQUI --- */}
-                      {/* Trocamos "destructive-outline" por "outline" que existe */}
                       <Button variant="outline" size="sm">
                         <Trash2 className="mr-2" />
                         Excluir
@@ -107,7 +101,6 @@ const MyPlans = () => {
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        {/* O botão de "Excluir" já é vermelho por padrão dentro do Alert */}
                         <AlertDialogAction onClick={() => handleDeletePlan(plan.id)}>
                           Excluir
                         </AlertDialogAction>

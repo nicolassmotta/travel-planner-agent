@@ -17,12 +17,8 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
 
     api_key = os.getenv("SERPAPI_API_KEY")
     if not api_key:
-        # --- MUDANÇA AQUI ---
-        # Em vez de retornar uma string, levantamos um erro.
         raise ValueError("SERPAPI_API_KEY não configurada no .env")
-        # --- FIM DA MUDANÇA ---
 
-    # --- Query de busca genérica ---
     query = f"Google Flights voos de {origin} para {destination} em {date}"
     if return_date:
         query += f" volta {return_date}"
@@ -42,10 +38,7 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
         organic_results = results.get("organic_results", [])
 
         if not organic_results:
-            # --- MUDANÇA AQUI ---
-            # Também tratamos o caso de não encontrar resultados como uma exceção
             raise Exception(f"Nenhum resultado encontrado para voos de {origin} para {destination}.")
-            # --- FIM DA MUDANÇA ---
 
         result = f"Voos de {origin} para {destination} (Ida: {date}"
         if return_date:
@@ -64,11 +57,7 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
             
         return result
     except Exception as e:
-        # --- MUDANÇA AQUI ---
-        # Se já for um ValueError, apenas o relança.
         if isinstance(e, ValueError):
              raise e
-        # Se for outro erro (ex: falha na API SerpApi), encapsula-o.
         print(f"❌ Erro na API de voos: {e}")
         raise Exception(f"Erro ao buscar voos com SerpApi: {str(e)}")
-        # --- FIM DA MUDANÇA ---

@@ -3,8 +3,8 @@ import requests
 from datetime import datetime
 from typing import Optional
 
-# Função auxiliar para obter coordenadas (sem alteração)
 def _get_coordinates(city: str):
+    """Função auxiliar para obter coordenadas."""
     geo_url = f"https://geocoding-api.open-Meteo.com/v1/search?name={city}&count=1&language=pt&format=json"
     try:
         geo_response = requests.get(geo_url)
@@ -21,7 +21,6 @@ def _get_coordinates(city: str):
         raise Exception(f"Erro ao obter coordenadas para '{city}': {e}")
 
 
-# --- NOVA FUNÇÃO AUXILIAR ---
 def _get_precipitation_summary(avg_precip: float) -> str:
     """Converte a média de mm de chuva em uma descrição amigável."""
     if avg_precip < 1.0:
@@ -32,7 +31,6 @@ def _get_precipitation_summary(avg_precip: float) -> str:
         return f"Moderada ({avg_precip:.1f}mm/dia). É uma boa ideia levar um guarda-chuva."
     else:
         return f"Alta ({avg_precip:.1f}mm/dia). Prepare-se para alguns dias chuvosos."
-# --- FIM DA NOVA FUNÇÃO ---
 
 
 def get_historical_average_weather(city: str, start_date: str, end_date: str) -> str:
@@ -75,19 +73,13 @@ def get_historical_average_weather(city: str, start_date: str, end_date: str) ->
         avg_temp = sum(weather_data["daily"]["temperature_2m_mean"]) / len(weather_data["daily"]["temperature_2m_mean"])
         avg_precip = sum(weather_data["daily"]["precipitation_sum"]) / len(weather_data["daily"]["precipitation_sum"])
 
-        # --- SAÍDA ATUALIZADA ---
-        # Chamamos a nova função para criar o sumário de chuva
         precipitation_summary = _get_precipitation_summary(avg_precip)
 
         return (f"Clima Histórico Médio para {city} (Período de {start_month_day} a {end_month_day}):\n"
                 f"* 🌡️ Temperatura média: {avg_temp:.1f}°C\n"
                 f"* ☔ Chance de Chuva: {precipitation_summary}\n"
                 f"(Baseado em dados climáticos de anos anteriores.)")
-        # --- FIM DA ATUALIZAÇÃO ---
 
     except Exception as e:
         print(f"[ERRO] Falha ao obter clima histórico: {e}")
-        # --- MUDANÇA AQUI ---
-        # Em vez de retornar uma string, levantamos a exceção
         raise Exception(f"Não foi possível obter a média histórica do clima: {e}")
-        # --- FIM DA MUDANÇA ---

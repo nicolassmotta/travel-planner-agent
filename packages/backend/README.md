@@ -2,7 +2,7 @@
 
 Este é o servidor backend do Travel Planner. É uma API construída em **FastAPI** que serve como interface para um agente de IA desenvolvido com o **Google Agent Development Kit (ADK)**.
 
-O agente coordena múltiplas ferramentas (APIs externas) para agregar dados de viagens e o modelo Gemini sintetiza esses dados num plano de viagem coerente.
+O agente coordena múltiplas ferramentas (APIs externas) para agregar dados de viagens e o modelo Gemini sintetiza esses dados num plano de viagem coerente. A resposta é enviada para o frontend via streaming.
 
 ## 🛠️ Tecnologias
 
@@ -16,7 +16,7 @@ O agente coordena múltiplas ferramentas (APIs externas) para agregar dados de v
 
 ### `POST /generate-plan`
 
-Este é o endpoint principal que recebe os detalhes da viagem e retorna o plano completo gerado pela IA.
+Este é o endpoint principal que recebe os detalhes da viagem e retorna o plano completo gerado pela IA como um `text/event-stream`.
 
 **Request Body** (`application/json`):
 
@@ -26,26 +26,27 @@ Este é o endpoint principal que recebe os detalhes da viagem e retorna o plano 
   "destination": "Paris",
   "departureDate": "2025-12-10",
   "returnDate": "2025-12-20",
-  "totalBudget": "5000",
-  "nightlyBudget": "300",
+  "totalBudget": 5000.0,
+  "nightlyBudget": 300.0,
   "preferences": "Gosto de museus, história e boa gastronomia."
 }
 ```
 
-**Success Response** (200 OK):
+**Success Response** (200 OK - `text/event-stream`):
 
-```json
-{
-  "plan": "### ✈️ **Opções de Voos**\n- Voo X... \n\n### 🏨 **Opções de Hotéis**\n- Hotel Y..."
-}
+```
+### ✈️ **Opções de Voos**
+- Voo X...
+
+### 🏨 **Opções de Hotéis**
+- Hotel Y...
+... (etc)
 ```
 
-**Error Response** (500 Internal Server Error):
+**Error Response** (O stream enviará uma string de erro):
 
-```json
-{
-  "error": "Mensagem de erro detalhada..."
-}
+```
+ERRO INTERNO DO SERVIDOR: SERPAPI_API_KEY não configurada no .env
 ```
 
 ## ⚙️ Configuração Local
@@ -53,6 +54,7 @@ Este é o endpoint principal que recebe os detalhes da viagem e retorna o plano 
 ### 1. Navegue até à Pasta
 
 ```bash
+# A partir da raiz do projeto
 cd packages/backend
 ```
 

@@ -12,9 +12,7 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
     print(f"🏨 [LOG] Buscando hotéis (SerpApi) em {city} ({check_in} a {check_out}) até R${budget}/noite...")
 
     if not api_key:
-        # --- MUDANÇA AQUI ---
         raise ValueError("SERPAPI_API_KEY não configurada no .env")
-        # --- FIM DA MUDANÇA ---
 
     params = {
         "api_key": api_key,
@@ -37,10 +35,7 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
 
         if not properties:
             print("🏨 [LOG] Motor 'google_hotels' não retornou. Tentando busca genérica...")
-            # --- MUDANÇA AQUI ---
-            # A busca genérica agora pode levantar um erro, que será apanhado pelo 'except'
             return _search_hotels_generic(city, check_in, check_out, budget, api_key)
-            # --- FIM DA MUDANÇA ---
 
         result = f"Opções de hotéis em {city} (até R${budget}/noite, ordenados por preço):\n"
         
@@ -63,7 +58,6 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
         return result
     
     except Exception as e:
-        # --- MUDANÇA AQUI ---
         if isinstance(e, ValueError):
              raise e
         print(f"❌ Erro inesperado ao buscar hotéis: {e}")
@@ -74,7 +68,6 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
             # Se a busca genérica também falhar, levanta o erro
             print(f"❌ Erro na busca genérica de fallback: {generic_e}")
             raise Exception(f"Erro ao buscar hotéis (falha na API primária e no fallback): {generic_e}")
-        # --- FIM DA MUDANÇA ---
 
 
 def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: float, api_key: str) -> str:
@@ -97,9 +90,7 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
         organic_results = results.get("organic_results", [])
         
         if not organic_results:
-             # --- MUDANÇA AQUI ---
              raise Exception(f"Nenhum hotel encontrado para {city} com esses filtros (fallback).")
-             # --- FIM DA MUDANÇA ---
 
         result = f"Opções de hotéis em {city} (busca genérica):\n"
         for item in organic_results[:5]:
@@ -108,8 +99,6 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
             result += f"- {title}\n  🔗 {link}\n"
         return result
     except Exception as e:
-        # --- MUDANÇA AQUI ---
         if isinstance(e, ValueError):
              raise e
         raise Exception(f"Erro na busca genérica de hotéis: {e}")
-        # --- FIM DA MUDANÇA ---

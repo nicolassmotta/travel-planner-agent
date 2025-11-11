@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Plane, Library, Sparkles } from "lucide-react";
+import { Plane, Library } from "lucide-react";
 import TravelForm, { type FormData } from "@/components/TravelForm";
 import TravelPlan from "@/components/TravelPlan";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { type SavedTravelPlan } from "./MyPlans";
-import { ThemeToggle } from "@/components/ThemeToggle"; // Importa o botão de tema
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const STORAGE_KEY = "travelPlans";
 
@@ -18,13 +18,11 @@ const Index = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Carrega o plano vindo da página "Meus Planos"
     if (location.state?.formData) {
       setInitialData(location.state.formData);
       setTravelPlan(location.state.plan);
       setCurrentPlanId(location.state.id);
     } else {
-      // Ou carrega o último plano do Local Storage
       const existingPlansRaw = localStorage.getItem(STORAGE_KEY);
       const existingPlans: SavedTravelPlan[] = existingPlansRaw ? JSON.parse(existingPlansRaw) : [];
       if (existingPlans.length > 0) {
@@ -36,7 +34,6 @@ const Index = () => {
   }, [location.state]);
 
   const handlePlanGenerated = (plan: string, data: FormData) => {
-    setTravelPlan(plan);
     const newPlanId = new Date().toISOString();
 
     try {
@@ -53,14 +50,9 @@ const Index = () => {
   };
 
   return (
-    // Layout principal da aplicação
     <div className="flex flex-col min-h-screen bg-muted/20 dark:bg-gray-950">
-      
-      {/* 1. O NOVO CABEÇALHO (NAVBAR) */}
       <header className="sticky top-0 z-50 w-full border-b bg-background shadow-sm">
         <div className="container mx-auto max-w-7xl px-4 h-16 flex items-center justify-between">
-          
-          {/* Título do App */}
           <Link to="/" className="flex items-center gap-2">
             <div className="p-2 bg-primary rounded-lg">
               <Plane className="w-5 h-5 text-primary-foreground" />
@@ -69,8 +61,6 @@ const Index = () => {
               Travel Planner
             </span>
           </Link>
-
-          {/* Botões de Ação */}
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" className="text-muted-foreground">
               <Link to="/meus-planos">
@@ -82,12 +72,8 @@ const Index = () => {
           </div>
         </div>
       </header>
-
-      {/* 2. O CONTEÚDO PRINCIPAL */}
       <main className="flex-1 container mx-auto max-w-7xl px-4 py-8 md:py-12">
         <div className="grid lg:grid-cols-2 gap-8 items-start">
-          
-          {/* Coluna da Esquerda (Formulário) */}
           <div>
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-foreground mb-1">
@@ -106,8 +92,6 @@ const Index = () => {
               setTravelPlan={setTravelPlan}
             />
           </div>
-
-          {/* Coluna da Direita (Plano) */}
           <div>
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-foreground mb-1">
@@ -121,8 +105,6 @@ const Index = () => {
           </div>
         </div>
       </main>
-
-      {/* Footer Fino */}
       <footer className="border-t py-6 px-4">
         <div className="container mx-auto max-w-7xl text-center text-muted-foreground text-sm">
           Powered by Google AI & SerpApi • © 2025

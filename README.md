@@ -5,11 +5,12 @@ Bem-vindo ao Travel Planner, um assistente de viagens inteligente full-stack. Es
 ## ✨ Funcionalidades Principais
 
 * **Planeamento por IA:** Recebe dados do utilizador (destino, datas, orçamento) e gera um itinerário detalhado em markdown.
+* **Streaming de Resposta:** O plano de viagem é exibido em tempo real, token por token, para uma experiência de utilizador instantânea.
 * **Dados em Tempo Real:** Integra-se com APIs para buscar:
-    * Opções de Voos
-    * Sugestões de Hotéis
-    * Recomendações de Atividades
-    * Previsão do Tempo Histórica
+    * Opções de Voos (SerpApi)
+    * Sugestões de Hotéis (SerpApi)
+    * Recomendações de Atividades (SerpApi)
+    * Previsão do Tempo Histórica (Open-Meteo)
 * **Interface Moderna:** Frontend reativo construído em React, TypeScript e shadcn-ui.
 * **Gestão de Planos:** Salva os planos de viagem no Local Storage para visualização futura.
 * **Exportação:** Permite o download do plano de viagem como PDF.
@@ -39,6 +40,7 @@ Este projeto é um monorepo que contém dois pacotes principais:
 ├── packages/
 │   ├── backend/  (Servidor FastAPI + Agente ADK)
 │   └── frontend/ (Aplicação React/Vite)
+├── .gitignore    (Gitignore principal)
 ├── README.md     (Este ficheiro)
 └── LICENSE
 ```
@@ -63,7 +65,7 @@ source .venv/bin/activate # (ou .\.venv\Scripts\activate no Windows)
 pip install -r requirements.txt
 
 # Crie um ficheiro .env com as suas chaves de API
-cp .env.example .env
+# (Pode copiar .env.example se existir, ou criar um novo)
 nano .env # (Adicione GOOGLE_API_KEY e SERPAPI_API_KEY)
 
 # Inicie o servidor
@@ -78,14 +80,17 @@ Instruções detalhadas no **[README do Frontend](./packages/frontend/README.md)
 # Num novo terminal, navegue para a pasta do frontend
 cd packages/frontend
 
+# Crie um ficheiro .env
+nano .env # (Adicione VITE_API_URL=http://localhost:8000)
+
 # Instale as dependências
-npm install # (ou pnpm install / yarn install)
+npm install # (ou pnpm install / bun install)
 
 # Inicie o servidor de desenvolvimento
 npm run dev
 ```
 
-A aplicação estará disponível em `http://localhost:8080` (ou outra porta definida no `vite.config.ts`).
+A aplicação estará disponível em `http://localhost:8080`.
 
 ## 📄 Licença
 

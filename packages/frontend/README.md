@@ -2,16 +2,15 @@
 
 Este é o frontend do Travel Planner, uma aplicação de página única (SPA) construída com **Vite, React e TypeScript**.
 
-Esta interface permite aos utilizadores inserir detalhes da viagem num formulário de múltiplos passos, enviar esses dados para o backend de IA e visualizar o plano de viagem gerado.
+Esta interface permite aos utilizadores inserir detalhes da viagem num formulário de múltiplos passos, enviar esses dados para o backend de IA e visualizar o plano de viagem gerado via streaming.
 
 ## ✨ Funcionalidades
 
 * **Formulário Multi-Step:** Experiência de utilizador guiada para recolher detalhes da viagem.
 * **Validação de Dados:** Utiliza **React Hook Form** e **Zod** para validação robusta dos campos.
-* **Renderização de Markdown:** Exibe o plano de viagem formatado usando `react-markdown`.
+* **Renderização em Tempo Real:** Recebe a resposta do backend via `fetch` stream e atualiza a UI token por token com `ReactMarkdown`.
 * **Visualização em Accordion:** Analisa a resposta do markdown e divide-a em secções (Voos, Hotéis, etc.) usando o componente `Accordion` da shadcn-ui.
-* **Gestão de Estado:** Gestão de estado local (React state) para o plano, estado de carregamento e dados do formulário.
-* **Persistência Local:** Salva e carrega planos de viagem de/para o `localStorage`.
+* **Persistência Local:** Salva e carrega planos de viagem de/para o `localStorage` na página "Meus Planos".
 * **Exportação para PDF:** Utiliza `jspdf` e `html2canvas` para permitir o download do plano de viagem.
 * **Tema Light/Dark:** Suporte completo para temas usando o `ThemeProvider`.
 
@@ -24,13 +23,13 @@ Esta interface permite aos utilizadores inserir detalhes da viagem num formulár
 * **Componentes UI**: shadcn-ui (construído sobre Radix UI)
 * **Formulários**: React Hook Form & Zod
 * **Routing**: React Router
-* **Comunicação API**: `fetch` (para a API FastAPI)
 
 ## ⚙️ Configuração Local
 
 ### 1. Navegue até à Pasta
 
 ```bash
+# A partir da raiz do projeto
 cd packages/frontend
 ```
 
@@ -41,18 +40,25 @@ npm install
 # ou
 pnpm install
 # ou
-yarn install
+bun install
 ```
 
 ### 3. Conexão com o Backend
 
-Esta aplicação espera que o servidor backend (FastAPI) esteja a ser executado em `http://localhost:8000`.
+Esta aplicação precisa de um ficheiro `.env` na raiz (`packages/frontend/`) para saber onde está a API.
 
-O URL da API está definido diretamente em `src/components/TravelForm.tsx`. Para produção, recomenda-se movê-lo para um ficheiro `.env`.
+Crie o ficheiro `packages/frontend/.env` com o seguinte conteúdo:
+
+```env
+# .env
+VITE_API_URL=http://localhost:8000
+```
+
+Certifique-se de que o servidor backend está a ser executado no URL especificado (ex: `http://localhost:8000`).
 
 ## 📜 Scripts Disponíveis
 
-* `npm run dev`: Inicia o servidor de desenvolvimento em `http://localhost:8080`.
+* `npm run dev`: Inicia o servidor de desenvolvimento (por defeito em `http://localhost:8080`).
 * `npm run build`: Compila a aplicação para produção na pasta `dist/`.
 * `npm run lint`: Executa o linter (ESLint) para verificar a qualidade do código.
 * `npm run preview`: Pré-visualiza a build de produção localmente.

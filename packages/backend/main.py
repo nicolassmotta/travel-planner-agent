@@ -13,9 +13,8 @@ from typing import Optional, AsyncGenerator
 # Importações do FastAPI
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# --- 1. IMPORTAR field_validator ---
 from pydantic import BaseModel, field_validator
-from fastapi.responses import StreamingResponse 
+from fastapi.responses import StreamingResponse
 
 # === CONFIGURAÇÃO INICIAL ===
 load_dotenv()
@@ -26,7 +25,7 @@ os.environ["GOOGLE_API_KEY"] = API_KEY
 
 today_str = datetime.now().strftime("%Y-%m-%d")
 
-# === INSTRUÇÕES DO AGENTE (Sem alteração) ===
+# === INSTRUÇÕES DO AGENTE ===
 agent_instructions = f"""
 Você é um Coordenador de Viagens de elite. A data de HOJE é: {today_str}.
 
@@ -45,7 +44,7 @@ Ao final, compile TODAS as informações (voos, hotéis, atividades e clima) em 
 Seja claro e organizado.
 """
 
-# === INICIALIZAÇÃO DO AGENTE E SERVIÇOS (Sem alteração) ===
+# === INICIALIZAÇÃO DO AGENTE E SERVIÇOS ===
 booking_integrator = LlmAgent(
     name="travel_planner",
     model="gemini-2.5-flash",
@@ -61,7 +60,7 @@ booking_integrator = LlmAgent(
 
 session_service = InMemorySessionService()
 
-# === DEFINIÇÃO DA API (Sem alteração) ===
+# === DEFINIÇÃO DA API ===
 app = FastAPI()
 
 origins = [
@@ -77,24 +76,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 2. MODELO DE DADOS ATUALIZADO ---
-# Mudamos os orçamentos de 'str' para 'float'
+# Modelo de dados Pydantic
 class TravelRequest(BaseModel):
     origin: str
     destination: str
     departureDate: str
     returnDate: Optional[str] = None
-    totalBudget: float  # <--- MUDANÇA AQUI
-    nightlyBudget: float # <--- MUDANÇA AQUI
+    totalBudget: float
+    nightlyBudget: float
     preferences: str
 
-    # Validador opcional, mas recomendado:
     @field_validator('totalBudget', 'nightlyBudget')
     def budgets_must_be_positive(cls, v):
         if v < 0:
             raise ValueError('O orçamento não pode ser negativo')
         return v
-# --- FIM DA MUDANÇA ---
 
 
 async def stream_plan_response(request: TravelRequest) -> AsyncGenerator[str, None]:
@@ -109,17 +105,10 @@ async def stream_plan_response(request: TravelRequest) -> AsyncGenerator[str, No
     
     runner = Runner(agent=booking_integrator, app_name=APP_NAME, session_service=session_service)
 
-    # Validamos a data de volta
     final_return_date = request.returnDate
     if not final_return_date:
         final_return_date = request.departureDate
 
-    # --- 3. LÓGICA DE CONVERSÃO REMOVIDA ---
-    # Não precisamos mais dos blocos try...except para converter os orçamentos.
-    # O Pydantic já fez isso por nós. 'request.totalBudget' JÁ É um float.
-    # --- FIM DA MUDANÇA ---
-
-    # Constrói o prompt inicial com os dados do formulário
     user_prompt = f"""
     Planeje minha viagem com os seguintes detalhes:
     - Origem: {request.origin}

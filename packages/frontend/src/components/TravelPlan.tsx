@@ -9,7 +9,6 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { useRef } from "react"; 
 
-// --- NOVAS IMPORTAÇÕES PARA O ACCODION ---
 import {
   Accordion,
   AccordionContent,
@@ -17,30 +16,26 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
-// --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 interface TravelPlanProps {
   plan: string | null;
   isLoading: boolean;
 }
 
-// --- NOVA FUNÇÃO ---
-// Esta função divide seu plano (como "### Voos ...") em seções
 function parsePlanToSections(plan: string) {
-  const sections = plan.split('### '); // Divide o plano por cada "### "
+  const sections = plan.split('### '); 
   
-  const intro = sections[0].trim(); // A introdução é tudo antes do primeiro "### "
+  const intro = sections[0].trim(); 
   
   const mappedSections = sections.slice(1).map((sectionText) => {
-    const parts = sectionText.split('\n'); // Pega a primeira linha como título
-    const title = parts[0].trim(); // Ex: "✈️ **Opções de Voos**"
-    const content = parts.slice(1).join('\n').trim(); // O resto é o conteúdo
+    const parts = sectionText.split('\n'); 
+    const title = parts[0].trim(); 
+    const content = parts.slice(1).join('\n').trim(); 
     return { title, content };
   });
 
   return { intro, sections: mappedSections };
 }
-// --- FIM DA NOVA FUNÇÃO ---
 
 
 const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
@@ -54,10 +49,9 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
     }
     toast({ title: "Gerando PDF..." });
 
-    // Força o fundo branco no PDF
     html2canvas(planContentRef.current, { 
       scale: 2,
-      backgroundColor: "#ffffff" // Fundo branco
+      backgroundColor: "#ffffff" 
     }).then((canvas) => {
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: "a4" });
@@ -89,8 +83,7 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
     }
   };
 
-  if (isLoading) {
-    // ... (O Skeleton não muda) ...
+  if (isLoading && !plan) {
     return (
       <Card className="p-6 shadow-lg">
         <div className="space-y-4">
@@ -108,7 +101,6 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
   }
 
   if (!plan) {
-    // ... (O "Nenhum plano gerado" não muda) ...
     return (
       <Card className="p-6 shadow-lg h-full min-h-[400px] flex items-center justify-center border-dashed">
         <div className="text-center space-y-3">
@@ -126,18 +118,17 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
     );
   }
 
-  // --- ONDE A MÁGICA ACONTECE ---
   const { intro, sections } = parsePlanToSections(plan);
 
   return (
     <Card className="shadow-lg">
-      {/* Botões de Ação */}
       <div className="flex gap-2 p-4 border-b">
         <Button 
           variant="outline" 
           size="sm"
           onClick={handleDownload}
           className="flex-1"
+          disabled={isLoading} 
         >
           <Download className="w-4 h-4 mr-2" />
           Baixar PDF
@@ -147,18 +138,14 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
           size="sm"
           onClick={handleShare}
           className="flex-1"
+          disabled={isLoading} 
         >
           <Share2 className="w-4 h-4 mr-2" />
           Compartilhar
         </Button>
       </div>
-
-      {/* Conteúdo do Plano (AGORA COM O ACCODION) */}
       <div ref={planContentRef} className="p-6">
-        
-        {/* Adiciona a classe 'dark:prose-invert' para corrigir o texto no dark mode */}
         <div className="prose prose-sm max-w-none dark:prose-invert">
-          {/* Introdução (renderizada fora do Accordion) */}
           <ReactMarkdown
             components={{
               a: ({ node, ...props }) => (
@@ -169,8 +156,6 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
             {intro}
           </ReactMarkdown>
         </div>
-
-        {/* Seções (Voos, Hotéis, etc.) renderizadas como Accordion */}
         <Accordion type="multiple" defaultValue={sections.map(s => s.title)} className="w-full mt-4">
           {sections.map((section, index) => (
             <AccordionItem value={section.title} key={index} className={cn(index === 0 && "border-t")}>
@@ -178,7 +163,6 @@ const TravelPlan = ({ plan, isLoading }: TravelPlanProps) => {
                 {section.title.replace(/\*/g, '')}
               </AccordionTrigger>
               <AccordionContent>
-                {/* Adiciona 'dark:prose-invert' aqui também */}
                 <div className="prose prose-sm max-w-none dark:prose-invert">
                   <ReactMarkdown
                     components={{

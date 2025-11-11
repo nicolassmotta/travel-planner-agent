@@ -16,7 +16,6 @@ const initialState: ThemeProviderState = {
   setTheme: () => null,
 }
 
-// O Context é exportado para que o hook possa usá-lo
 export const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
