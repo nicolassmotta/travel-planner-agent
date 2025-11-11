@@ -11,7 +11,7 @@ Esta interface permite aos utilizadores inserir detalhes da viagem num formulár
 * **Renderização em Tempo Real:** Recebe a resposta do backend via `fetch` stream e atualiza a UI token por token com `ReactMarkdown`.
 * **Visualização em Accordion:** Analisa a resposta do markdown e divide-a em secções (Voos, Hotéis, etc.) usando o componente `Accordion` da shadcn-ui.
 * **Persistência Local:** Salva e carrega planos de viagem de/para o `localStorage` na página "Meus Planos".
-* **Exportação para PDF:** Utiliza `jspdf` e `html2canvas` para permitir o download do plano de viagem.
+* **Exportação para PDF:** Envia o plano em Markdown para o backend, que gera e devolve um PDF vetorial.
 * **Tema Light/Dark:** Suporte completo para temas usando o `ThemeProvider`.
 
 ## 🛠️ Pilha Tecnológica
@@ -23,6 +23,7 @@ Esta interface permite aos utilizadores inserir detalhes da viagem num formulár
 * **Componentes UI**: shadcn-ui (construído sobre Radix UI)
 * **Formulários**: React Hook Form & Zod
 * **Routing**: React Router
+* **Comunicação API**: `fetch` (para a API FastAPI, incluindo download de ficheiros/blob)
 
 ## ⚙️ Configuração Local
 

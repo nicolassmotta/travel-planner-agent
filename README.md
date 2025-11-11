@@ -13,7 +13,7 @@ Bem-vindo ao Travel Planner, um assistente de viagens inteligente full-stack. Es
     * Previsão do Tempo Histórica (Open-Meteo)
 * **Interface Moderna:** Frontend reativo construído em React, TypeScript e shadcn-ui.
 * **Gestão de Planos:** Salva os planos de viagem no Local Storage para visualização futura.
-* **Exportação:** Permite o download do plano de viagem como PDF.
+* **Exportação para PDF:** Gera um PDF vetorial limpo (texto selecionável) a partir do plano de viagem.
 * **Modo Light/Dark:** Suporte completo para temas.
 
 ## 🛠️ Pilha Tecnológica
@@ -25,12 +25,13 @@ Este projeto é um monorepo que contém dois pacotes principais:
     * **UI**: shadcn-ui, Tailwind CSS
     * **Formulários**: React Hook Form com Zod para validação
     * **Routing**: React Router
-    * **Utilitários**: `jspdf`, `html2canvas` (para exportar PDF), `react-markdown`
+    * **Utilitários**: `react-markdown`
 
 * **`packages/backend`**:
     * **Framework**: Python 3 com FastAPI
     * **Core de IA**: Google Agent Development Kit (ADK)
     * **Modelo**: Google Gemini (ex: `gemini-2.5-flash`)
+    * **Geração de PDF**: WeasyPrint, Markdown-it-py
     * **Ferramentas (APIs)**: SerpApi (Google Search/Hotels), Open-Meteo
 
 ## 📂 Estrutura do Repositório
