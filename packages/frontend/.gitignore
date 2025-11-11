@@ -1,0 +1,9 @@
+# Ficheiro: /packages/frontend/.gitignore
+
+# Artefatos de build específicos (dist/ já está na raiz)
+dist-ssr/
+
+# Configuração local específica do Vite
+*.local
+
+# Logs específicos (npm-debug etc. já estão na raiz)

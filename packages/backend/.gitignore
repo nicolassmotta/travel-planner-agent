@@ -1,0 +1,7 @@
+# Ficheiro: /packages/backend/.gitignore
+
+# Ignora caches, mesmo que a raiz já o faça (boa prática)
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.dist-info/
