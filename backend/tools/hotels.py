@@ -14,7 +14,6 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
     if not api_key:
         return "ERRO: SERPAPI_API_KEY não configurada no .env"
 
-    # --- 2. Parâmetros para a nova biblioteca ---
     params = {
         "api_key": api_key,
         "engine": "google_hotels",
@@ -29,7 +28,6 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
     }
 
     try:
-        # --- 3. Nova sintaxe de busca ---
         client = serpapi.Client()
         results = client.search(params)
         
@@ -41,6 +39,7 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
 
         result = f"Opções de hotéis em {city} (até R${budget}/noite, ordenados por preço):\n"
         
+        # --- ATUALIZAÇÃO AQUI ---
         for item in properties[:5]:
             title = item.get("name", "")
             rate = item.get("rate_per_night", {})
@@ -50,9 +49,13 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
                  price = item.get("price", "N/A")
 
             rating = item.get("overall_rating", "N/A")
+            link = item.get("link", "") # <-- NOVA LINHA: Pega o link
             
             result += f"- {title}\n"
             result += f"  Preço: {price} | Avaliação: {rating} ★\n"
+            if link: # <-- NOVA LINHA: Adiciona o link se ele existir
+                result += f"  🔗 Link: {link}\n"
+        # --- FIM DA ATUALIZAÇÃO ---
         
         return result
     
@@ -75,7 +78,6 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
     }
 
     try:
-        # --- Nova sintaxe de busca (Fallback) ---
         client = serpapi.Client()
         results = client.search(params)
         

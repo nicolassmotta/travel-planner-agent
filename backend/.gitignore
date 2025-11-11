@@ -1,0 +1,25 @@
+# === Python / Ambientes Virtuais ===
+# Ignora todos os ambientes virtuais
+.venv/
+venv/
+env/
+*.env.local
+
+# === Caches e Artefatos do Python ===
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.dist-info/
+*.whl
+pip-wheel-metadata/
+
+# === Arquivos de Segredos ===
+# Ignora o arquivo de chaves de API
+.env
+
+# === Arquivos de IDE ===
+.idea/
+.vscode/
+
+# === Logs ===
+*.log

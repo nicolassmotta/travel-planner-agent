@@ -15,6 +15,20 @@ def _get_coordinates(city: str):
     lon = geo_data["results"][0]["longitude"]
     return lat, lon
 
+# --- NOVA FUNÇÃO AUXILIAR ---
+def _get_precipitation_summary(avg_precip: float) -> str:
+    """Converte a média de mm de chuva em uma descrição amigável."""
+    if avg_precip < 1.0:
+        return f"Muito baixa ({avg_precip:.1f}mm/dia). O tempo deve ficar seco."
+    elif avg_precip < 3.0:
+        return f"Baixa ({avg_precip:.1f}mm/dia). Pode haver pancadas de chuva leves e ocasionais."
+    elif avg_precip < 6.0:
+        return f"Moderada ({avg_precip:.1f}mm/dia). É uma boa ideia levar um guarda-chuva."
+    else:
+        return f"Alta ({avg_precip:.1f}mm/dia). Prepare-se para alguns dias chuvosos."
+# --- FIM DA NOVA FUNÇÃO ---
+
+
 def get_historical_average_weather(city: str, start_date: str, end_date: str) -> str:
     """
     Busca a MÉDIA HISTÓRICA do clima para um período.
@@ -27,21 +41,15 @@ def get_historical_average_weather(city: str, start_date: str, end_date: str) ->
     try:
         lat, lon = _get_coordinates(city)
 
-        # Converte datas YYYY-MM-DD para o formato MM-DD
-        # A API histórica não se importa com o ano para médias
         start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
         end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
         
-        # Formato da API histórica (ex: "11-20")
         start_month_day = start_date_obj.strftime("%m-%d")
         end_month_day = end_date_obj.strftime("%m-%d")
         
-        # A API de média diária usa 'start_date' e 'end_date' com um ano fixo (ex: 2023)
-        # para definir o período do ano.
         api_start = f"2023-{start_month_day}"
         api_end = f"2023-{end_month_day}"
 
-        # URL da API de Clima Histórico (ERA5 - cobre de 1940 até hoje)
         weather_url = (
             f"https://archive-api.open-meteo.com/v1/era5?"
             f"latitude={lat}&longitude={lon}"
@@ -56,14 +64,18 @@ def get_historical_average_weather(city: str, start_date: str, end_date: str) ->
         if "daily" not in weather_data:
              return f"Não foi possível obter dados históricos para {city}."
 
-        # Pega a média dos valores diários
         avg_temp = sum(weather_data["daily"]["temperature_2m_mean"]) / len(weather_data["daily"]["temperature_2m_mean"])
         avg_precip = sum(weather_data["daily"]["precipitation_sum"]) / len(weather_data["daily"]["precipitation_sum"])
 
+        # --- SAÍDA ATUALIZADA ---
+        # Chamamos a nova função para criar o sumário de chuva
+        precipitation_summary = _get_precipitation_summary(avg_precip)
+
         return (f"Clima Histórico Médio para {city} (Período de {start_month_day} a {end_month_day}):\n"
                 f"* 🌡️ Temperatura média: {avg_temp:.1f}°C\n"
-                f"* ☔ Precipitação média: {avg_precip:.1f}mm por dia\n"
+                f"* ☔ Chance de Chuva: {precipitation_summary}\n" # <-- LINHA MODIFICADA
                 f"(Baseado em dados climáticos de anos anteriores.)")
+        # --- FIM DA ATUALIZAÇÃO ---
 
     except Exception as e:
         print(f"[ERRO] Falha ao obter clima histórico: {e}")
