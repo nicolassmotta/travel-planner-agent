@@ -8,12 +8,14 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from tools import flights, hotels, recommendations, weather
 from datetime import datetime
-from typing import Optional
+from typing import Optional, AsyncGenerator
 
 # Importações do FastAPI
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+# --- 1. IMPORTAR field_validator ---
 from pydantic import BaseModel, field_validator
+from fastapi.responses import StreamingResponse 
 
 # === CONFIGURAÇÃO INICIAL ===
 load_dotenv()
@@ -24,7 +26,7 @@ os.environ["GOOGLE_API_KEY"] = API_KEY
 
 today_str = datetime.now().strftime("%Y-%m-%d")
 
-# === INSTRUÇÕES DO AGENTE (Mesma da última vez) ===
+# === INSTRUÇÕES DO AGENTE (Sem alteração) ===
 agent_instructions = f"""
 Você é um Coordenador de Viagens de elite. A data de HOJE é: {today_str}.
 
@@ -43,7 +45,7 @@ Ao final, compile TODAS as informações (voos, hotéis, atividades e clima) em 
 Seja claro e organizado.
 """
 
-# === INICIALIZAÇÃO DO AGENTE E SERVIÇOS ===
+# === INICIALIZAÇÃO DO AGENTE E SERVIÇOS (Sem alteração) ===
 booking_integrator = LlmAgent(
     name="travel_planner",
     model="gemini-2.5-flash",
@@ -59,10 +61,9 @@ booking_integrator = LlmAgent(
 
 session_service = InMemorySessionService()
 
-# === DEFINIÇÃO DA API ===
+# === DEFINIÇÃO DA API (Sem alteração) ===
 app = FastAPI()
 
-# Configuração do CORS (sem alteração)
 origins = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
@@ -76,60 +77,57 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Modelo de dados Pydantic (CORRIGIDO)
-# Voltamos a aceitar 'str' para os orçamentos, para não dar erro 422
+# --- 2. MODELO DE DADOS ATUALIZADO ---
+# Mudamos os orçamentos de 'str' para 'float'
 class TravelRequest(BaseModel):
     origin: str
     destination: str
     departureDate: str
     returnDate: Optional[str] = None
-    totalBudget: str  # <--- CORREÇÃO AQUI
-    nightlyBudget: str # <--- CORREÇÃO AQUI
+    totalBudget: float  # <--- MUDANÇA AQUI
+    nightlyBudget: float # <--- MUDANÇA AQUI
     preferences: str
 
-# Endpoint principal da API
-@app.post("/generate-plan")
-async def generate_plan(request: TravelRequest):
+    # Validador opcional, mas recomendado:
+    @field_validator('totalBudget', 'nightlyBudget')
+    def budgets_must_be_positive(cls, v):
+        if v < 0:
+            raise ValueError('O orçamento não pode ser negativo')
+        return v
+# --- FIM DA MUDANÇA ---
+
+
+async def stream_plan_response(request: TravelRequest) -> AsyncGenerator[str, None]:
     APP_NAME = "travel_planner"
     USER_ID = "user_api" 
     SESSION_ID = f"session_{datetime.now().timestamp()}" 
 
-    print("\n--- NOVA REQUISIÇÃO RECEBIDA ---")
+    print("\n--- NOVA REQUISIÇÃO (STREAM) RECEBIDA ---")
     print(f"Dados Recebidos: {request.model_dump_json(indent=2)}")
 
     await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID)
     
     runner = Runner(agent=booking_integrator, app_name=APP_NAME, session_service=session_service)
 
-    # --- INÍCIO DA CORREÇÃO ---
-    # Validamos a data de volta AQUI, antes de enviar ao agente.
+    # Validamos a data de volta
     final_return_date = request.returnDate
     if not final_return_date:
         final_return_date = request.departureDate
 
-    # Convertemos os orçamentos de string para float AQUI.
-    # Se a string estiver vazia ou for inválida, usamos 0.0
-    try:
-        total_budget_float = float(request.totalBudget)
-    except (ValueError, TypeError):
-        total_budget_float = 0.0
+    # --- 3. LÓGICA DE CONVERSÃO REMOVIDA ---
+    # Não precisamos mais dos blocos try...except para converter os orçamentos.
+    # O Pydantic já fez isso por nós. 'request.totalBudget' JÁ É um float.
+    # --- FIM DA MUDANÇA ---
 
-    try:
-        nightly_budget_float = float(request.nightlyBudget)
-    except (ValueError, TypeError):
-        nightly_budget_float = 0.0
-    # --- FIM DA CORREÇÃO ---
-
-
-    # Constrói o prompt inicial com os dados do formulário JÁ VALIDADOS E CONVERTIDOS
+    # Constrói o prompt inicial com os dados do formulário
     user_prompt = f"""
     Planeje minha viagem com os seguintes detalhes:
     - Origem: {request.origin}
     - Destino: {request.destination}
     - Data de Ida: {request.departureDate}
     - Data de Volta: {final_return_date} 
-    - Orçamento Total: R$ {total_budget_float}
-    - Orçamento Hotel (por noite): R$ {nightly_budget_float}
+    - Orçamento Total: R$ {request.totalBudget} 
+    - Orçamento Hotel (por noite): R$ {request.nightlyBudget}
     - Preferências: {request.preferences}
     """
 
@@ -138,8 +136,6 @@ async def generate_plan(request: TravelRequest):
 
     content = types.Content(role="user", parts=[types.Part(text=user_prompt)])
     
-    full_response = []
-
     try:
         async for event in runner.run_async(
             user_id=USER_ID,
@@ -149,23 +145,23 @@ async def generate_plan(request: TravelRequest):
             if hasattr(event, "content") and event.content and event.content.parts:
                 for part in event.content.parts:
                     if hasattr(part, "text") and part.text:
-                        full_response.append(part.text)
+                        print(f"--- STREAMING CHUNK: {part.text} ---")
+                        yield part.text
     
     except Exception as e:
         print(f"!!!!!!!!!! ERRO NO AGENTE !!!!!!!!!!")
         print(f"Erro ao processar agente: {e}")
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        return {"error": f"Erro interno do agente: {e}"}
+        yield f"\n\nERRO INTERNO DO SERVIDOR: {e}"
     finally:
         await runner.close()
+        print("--- STREAM CONCLUÍDA ---")
 
-    final_plan = "\n".join(full_response)
-    print("\n--- RESPOSTA FINAL DO AGENTE ---")
-    print(final_plan)
-    print("----------------------------------\n")
 
-    # Retorna o plano completo
-    return {"plan": final_plan}
+# Endpoint principal da API
+@app.post("/generate-plan")
+async def generate_plan(request: TravelRequest):
+    return StreamingResponse(stream_plan_response(request), media_type="text/event-stream")
 
 # --- Para rodar o servidor ---
 # Use o comando: uvicorn main:app --host 0.0.0.0 --port 8000 --reload

@@ -13,7 +13,9 @@ def get_recommendations(city: str, category: str) -> str:
 
     api_key = os.getenv("SERPAPI_API_KEY")
     if not api_key:
-        return "ERRO: SERPAPI_API_KEY não configurada no .env"
+        # --- MUDANÇA AQUI ---
+        raise ValueError("SERPAPI_API_KEY não configurada no .env")
+        # --- FIM DA MUDANÇA ---
 
     query = f"roteiro de viagem {category} em {city} dicas"
     
@@ -32,7 +34,9 @@ def get_recommendations(city: str, category: str) -> str:
         organic_results = results.get("organic_results", [])
 
         if not organic_results:
-            return f"Nenhuma recomendação encontrada para '{query}'."
+            # --- MUDANÇA AQUI ---
+            raise Exception(f"Nenhuma recomendação encontrada para '{query}'.")
+            # --- FIM DA MUDANÇA ---
 
         result = f"Recomendações e Roteiros para {category} em {city}:\n"
 
@@ -48,4 +52,9 @@ def get_recommendations(city: str, category: str) -> str:
             
         return result
     except Exception as e:
-        return f"Erro ao buscar recomendações: {str(e)}"
+        # --- MUDANÇA AQUI ---
+        if isinstance(e, ValueError):
+             raise e
+        print(f"❌ Erro na API de recomendações: {e}")
+        raise Exception(f"Erro ao buscar recomendações: {str(e)}")
+        # --- FIM DA MUDANÇA ---

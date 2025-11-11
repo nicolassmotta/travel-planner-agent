@@ -103,6 +103,7 @@ const Index = () => {
               setIsLoading={setIsLoading}
               key={currentPlanId} 
               initialData={initialData}
+              setTravelPlan={setTravelPlan}
             />
           </div>
 

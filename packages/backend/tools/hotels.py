@@ -1,6 +1,6 @@
 # tools/hotels.py
 import os
-import serpapi # <-- 1. Importe apenas a biblioteca principal
+import serpapi
 from typing import Optional
 
 def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -> str:
@@ -12,7 +12,9 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
     print(f"🏨 [LOG] Buscando hotéis (SerpApi) em {city} ({check_in} a {check_out}) até R${budget}/noite...")
 
     if not api_key:
-        return "ERRO: SERPAPI_API_KEY não configurada no .env"
+        # --- MUDANÇA AQUI ---
+        raise ValueError("SERPAPI_API_KEY não configurada no .env")
+        # --- FIM DA MUDANÇA ---
 
     params = {
         "api_key": api_key,
@@ -35,11 +37,13 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
 
         if not properties:
             print("🏨 [LOG] Motor 'google_hotels' não retornou. Tentando busca genérica...")
+            # --- MUDANÇA AQUI ---
+            # A busca genérica agora pode levantar um erro, que será apanhado pelo 'except'
             return _search_hotels_generic(city, check_in, check_out, budget, api_key)
+            # --- FIM DA MUDANÇA ---
 
         result = f"Opções de hotéis em {city} (até R${budget}/noite, ordenados por preço):\n"
         
-        # --- ATUALIZAÇÃO AQUI ---
         for item in properties[:5]:
             title = item.get("name", "")
             rate = item.get("rate_per_night", {})
@@ -49,19 +53,28 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
                  price = item.get("price", "N/A")
 
             rating = item.get("overall_rating", "N/A")
-            link = item.get("link", "") # <-- NOVA LINHA: Pega o link
+            link = item.get("link", "")
             
             result += f"- {title}\n"
             result += f"  Preço: {price} | Avaliação: {rating} ★\n"
-            if link: # <-- NOVA LINHA: Adiciona o link se ele existir
+            if link:
                 result += f"  🔗 Link: {link}\n"
-        # --- FIM DA ATUALIZAÇÃO ---
         
         return result
     
     except Exception as e:
+        # --- MUDANÇA AQUI ---
+        if isinstance(e, ValueError):
+             raise e
         print(f"❌ Erro inesperado ao buscar hotéis: {e}")
-        return _search_hotels_generic(city, check_in, check_out, budget, api_key)
+        # Tenta a busca genérica como último recurso
+        try:
+            return _search_hotels_generic(city, check_in, check_out, budget, api_key)
+        except Exception as generic_e:
+            # Se a busca genérica também falhar, levanta o erro
+            print(f"❌ Erro na busca genérica de fallback: {generic_e}")
+            raise Exception(f"Erro ao buscar hotéis (falha na API primária e no fallback): {generic_e}")
+        # --- FIM DA MUDANÇA ---
 
 
 def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: float, api_key: str) -> str:
@@ -84,7 +97,9 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
         organic_results = results.get("organic_results", [])
         
         if not organic_results:
-             return f"Nenhum hotel encontrado para {city} com esses filtros (fallback)."
+             # --- MUDANÇA AQUI ---
+             raise Exception(f"Nenhum hotel encontrado para {city} com esses filtros (fallback).")
+             # --- FIM DA MUDANÇA ---
 
         result = f"Opções de hotéis em {city} (busca genérica):\n"
         for item in organic_results[:5]:
@@ -93,4 +108,8 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
             result += f"- {title}\n  🔗 {link}\n"
         return result
     except Exception as e:
-        return f"Erro na busca genérica de hotéis: {e}"
+        # --- MUDANÇA AQUI ---
+        if isinstance(e, ValueError):
+             raise e
+        raise Exception(f"Erro na busca genérica de hotéis: {e}")
+        # --- FIM DA MUDANÇA ---

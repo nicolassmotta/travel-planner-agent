@@ -1,6 +1,6 @@
 # tools/flights.py
 import os
-import serpapi # <-- 1. Importe apenas a biblioteca principal
+import serpapi
 from typing import Optional
 
 def get_flight_options(origin: str, destination: str, date: str, return_date: Optional[str] = None) -> str:
@@ -17,14 +17,16 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
 
     api_key = os.getenv("SERPAPI_API_KEY")
     if not api_key:
-        return "ERRO: SERPAPI_API_KEY não configurada no .env"
+        # --- MUDANÇA AQUI ---
+        # Em vez de retornar uma string, levantamos um erro.
+        raise ValueError("SERPAPI_API_KEY não configurada no .env")
+        # --- FIM DA MUDANÇA ---
 
     # --- Query de busca genérica ---
     query = f"Google Flights voos de {origin} para {destination} em {date}"
     if return_date:
         query += f" volta {return_date}"
     
-    # --- 2. Parâmetros para a nova biblioteca ---
     params = {
         "api_key": api_key,
         "engine": "google",
@@ -34,15 +36,16 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
     }
 
     try:
-        # --- 3. Nova sintaxe de busca ---
         client = serpapi.Client()
         results = client.search(params)
         
-        # O resultado já é um dicionário
         organic_results = results.get("organic_results", [])
 
         if not organic_results:
-            return f"Nenhum resultado encontrado para voos de {origin} para {destination}."
+            # --- MUDANÇA AQUI ---
+            # Também tratamos o caso de não encontrar resultados como uma exceção
+            raise Exception(f"Nenhum resultado encontrado para voos de {origin} para {destination}.")
+            # --- FIM DA MUDANÇA ---
 
         result = f"Voos de {origin} para {destination} (Ida: {date}"
         if return_date:
@@ -61,4 +64,11 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
             
         return result
     except Exception as e:
-        return f"Erro ao buscar voos com SerpApi: {str(e)}"
+        # --- MUDANÇA AQUI ---
+        # Se já for um ValueError, apenas o relança.
+        if isinstance(e, ValueError):
+             raise e
+        # Se for outro erro (ex: falha na API SerpApi), encapsula-o.
+        print(f"❌ Erro na API de voos: {e}")
+        raise Exception(f"Erro ao buscar voos com SerpApi: {str(e)}")
+        # --- FIM DA MUDANÇA ---

@@ -42,13 +42,15 @@ interface TravelFormProps {
   setIsLoading: (loading: boolean) => void;
   // Adicionamos uma prop para preencher o formulário com dados salvos
   initialData?: FormData;
+  setTravelPlan: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const TravelForm = ({ 
   onPlanGenerated, 
   isLoading, 
   setIsLoading, 
-  initialData 
+  initialData,
+  setTravelPlan
 }: TravelFormProps) => {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
@@ -68,9 +70,17 @@ const TravelForm = ({
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
+    setTravelPlan(null); // Limpa o plano anterior
     
+    let fullPlan = ""; // Acumulador para o plano completo
+
+    // --- MUDANÇA DA MELHORIA 2 ---
+    // Lê o URL do .env, com um fallback para o localhost
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    // --- FIM DA MUDANÇA ---
+
     try {
-      const response = await fetch("http://localhost:8000/generate-plan", {
+      const response = await fetch(`${apiUrl}/generate-plan`, { // <--- URL ATUALIZADO
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,22 +89,38 @@ const TravelForm = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json(); // Tenta ler o erro como JSON
         throw new Error(errorData.error || "Falha na comunicação com o servidor");
       }
 
-      const result = await response.json();
-
-      if (result.plan) {
-        // --- MUDANÇA 3: Passamos 'data' (os dados do form) para a função ---
-        onPlanGenerated(result.plan, data);
-        toast({
-          title: "Plano gerado com sucesso!",
-          description: "Confira seu itinerário personalizado ao lado",
-        });
-      } else {
-        throw new Error("A resposta da API não continha um plano.");
+      // --- LÓGICA DE STREAMING ---
+      if (!response.body) {
+        throw new Error("A resposta da API não continha um corpo.");
       }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break; // Stream terminada
+        }
+        
+        const chunk = decoder.decode(value);
+        fullPlan += chunk;
+        setTravelPlan(fullPlan); // Atualiza o estado em tempo real
+      }
+      // --- FIM DA LÓGICA DE STREAMING ---
+
+      // Quando a stream termina, guardamos o plano completo no Local Storage
+      onPlanGenerated(fullPlan, data); 
+      
+      toast({
+        title: "Plano gerado com sucesso!",
+        description: "Confira seu itinerário personalizado ao lado",
+      });
 
     } catch (error) {
       console.error("Erro ao gerar plano:", error);
@@ -175,6 +201,7 @@ const TravelForm = ({
                 />
                 {errors.departureDate && (
                   <p className="text-sm text-destructive mt-1">{errors.departureDate.message}</p>
+
                 )}
               </div>
 
