@@ -1,28 +1,33 @@
-# Ambientes Virtuais
+# === Global ===
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# === Python / Backend ===
+# Ignora todos os ambientes virtuais
 .venv/
 venv/
 env/
 
-# Cache do Python
-*.py[cod]
+# Caches do Python
 __pycache__/
-
-# Arquivos de IDE
-.idea/
-.vscode/
-
-# Arquivos de sistema operacional
-.DS_Store
-Thumbs.db
-
-# Logs e arquivos de segredos
-*.log
-.env
-*.env
-secrets.toml
-config.ini
-
-# Pacotes e dependências
-build/
-dist/
+*.py[cod]
 *.egg-info/
+
+# Segredos e logs do Backend
+backend/.env
+backend/*.log
+
+# === Node / Frontend ===
+#
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/logs/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*

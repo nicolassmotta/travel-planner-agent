@@ -6,11 +6,16 @@ from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
-# Verifique se 'recommendations' está aqui
-from tools import flights, hotels, recommendations, weather 
+from tools import flights, hotels, recommendations, weather
 from datetime import datetime
+from typing import Optional
 
-# === CONFIGURAÇÃO ===
+# Importações do FastAPI
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# === CONFIGURAÇÃO INICIAL ===
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 if not API_KEY:
@@ -19,7 +24,7 @@ os.environ["GOOGLE_API_KEY"] = API_KEY
 
 today_str = datetime.now().strftime("%Y-%m-%d")
 
-# === INSTRUÇÕES DE COORDENADOR (A MUDANÇA PRINCIPAL) ===
+# === INSTRUÇÕES DO AGENTE (Sem alteração) ===
 agent_instructions = f"""
 Você é um Coordenador de Viagens de elite. A data de HOJE é: {today_str}.
 
@@ -37,7 +42,7 @@ NÃO chame todas as ferramentas de uma vez. Seja metódico:
 Seja um coordenador: pergunte, execute UMA ferramenta, mostre o resultado, e então pergunte o próximo passo.
 """
 
-# Voltamos ao agente único (monolítico), mas com cérebro de coordenador
+# === INICIALIZAÇÃO DO AGENTE E SERVIÇOS ===
 booking_integrator = LlmAgent(
     name="travel_planner",
     model="gemini-2.5-flash",
@@ -51,47 +56,83 @@ booking_integrator = LlmAgent(
     ],
 )
 
-# === LOOP PRINCIPAL (Sem alteração) ===
-async def main():
+session_service = InMemorySessionService()
+
+# === DEFINIÇÃO DA API ===
+app = FastAPI()
+
+# Configuração do CORS para permitir requisições do seu frontend (Vite na porta 8080)
+#
+origins = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Modelo de dados Pydantic para o request do frontend
+# Deve bater com o schema do Zod do seu TravelForm.tsx
+class TravelRequest(BaseModel):
+    origin: str
+    destination: str
+    departureDate: str
+    returnDate: Optional[str] = None
+    totalBudget: str
+    nightlyBudget: str
+    preferences: str
+
+# Endpoint principal da API
+@app.post("/generate-plan")
+async def generate_plan(request: TravelRequest):
     APP_NAME = "travel_planner"
-    USER_ID = "user_1"
-    SESSION_ID = "session_1"
+    USER_ID = "user_api" # ID de usuário estático para a API
+    SESSION_ID = f"session_{datetime.now().timestamp()}" # Nova sessão a cada request
 
-    session_service = InMemorySessionService()
     await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID)
-
-    # O Runner executa o agente único
+    
     runner = Runner(agent=booking_integrator, app_name=APP_NAME, session_service=session_service)
 
-    print("🌍 Bem-vindo ao Agente de Viagens Inteligente (Versão Coordenador) ✈️\n")
-    print(f"(Contexto do Agente: Hoje é {today_str})\n")
-    print("Digite sua solicitação (ex: 'Planeje uma viagem de São Paulo para Roma de 20/11 a 30/11/2025 com orçamento total de 20000 reais e foco cultural')\n")
-    print("Digite 'sair' para encerrar.\n")
+    # Constrói o prompt inicial com todos os dados do formulário
+    user_prompt = f"""
+    Planeje minha viagem com os seguintes detalhes:
+    - Origem: {request.origin}
+    - Destino: {request.destination}
+    - Data de Ida: {request.departureDate}
+    - Data de Volta: {request.returnDate or 'Não definida'}
+    - Orçamento Total: R$ {request.totalBudget}
+    - Orçamento Hotel (por noite): R$ {request.nightlyBudget}
+    - Preferências: {request.preferences}
+    """
 
-    while True:
-        user_prompt = input("🧳 Você: ").strip()
-        if user_prompt.lower() in ["sair", "exit", "quit"]:
-            print("👋 Encerrando sessão. Boa viagem!")
-            await runner.close()
-            break
+    content = types.Content(role="user", parts=[types.Part(text=user_prompt)])
+    
+    full_response = []
 
-        content = types.Content(role="user", parts=[types.Part(text=user_prompt)])
-        print("\n🤖 Agente está processando...\n")
-
+    try:
         async for event in runner.run_async(
             user_id=USER_ID,
             session_id=SESSION_ID,
             new_message=content
         ):
-            function_calls = getattr(event, "function_calls", None)
-            if function_calls:
-                for call in function_calls:
-                    print(f"🧩 [DEBUG] Chamando ferramenta: {call.name}({call.args})")
-
             if hasattr(event, "content") and event.content and event.content.parts:
                 for part in event.content.parts:
                     if hasattr(part, "text") and part.text:
-                        print(f"📋 {part.text}")
+                        full_response.append(part.text)
+    
+    except Exception as e:
+        print(f"Erro ao processar agente: {e}")
+        return {"error": str(e)}, 500
+    finally:
+        await runner.close()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    # Retorna o plano completo como uma string única
+    return {"plan": "\n".join(full_response)}
+
+# --- Para rodar o servidor ---
+# Use o comando: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
