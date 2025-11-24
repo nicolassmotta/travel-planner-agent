@@ -101,7 +101,11 @@ const Index = () => {
                 {travelPlan ? "Seu itinerário personalizado está pronto!" : "Aguardando informações..."}
               </p>
             </div>
-            <TravelPlan plan={travelPlan} isLoading={isLoading} />
+            <TravelPlan 
+            plan={travelPlan} 
+            isLoading={isLoading} 
+            destination={initialData?.destination}
+            />
           </div>
         </div>
       </main>

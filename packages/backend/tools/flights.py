@@ -2,7 +2,10 @@
 import os
 import serpapi
 from typing import Optional
+from functools import lru_cache
 
+# Cache para evitar chamadas repetidas (economiza $$ e tempo)
+@lru_cache(maxsize=32)
 def get_flight_options(origin: str, destination: str, date: str, return_date: Optional[str] = None) -> str:
     """
     Busca voos reais via SerpApi (usando a nova sintaxe do cliente).
@@ -38,7 +41,8 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
         organic_results = results.get("organic_results", [])
 
         if not organic_results:
-            raise Exception(f"Nenhum resultado encontrado para voos de {origin} para {destination}.")
+            # Retorna uma string amigável em vez de erro para não quebrar o fluxo do agente
+            return f"Não foram encontrados voos diretos ou específicos de {origin} para {destination} nessas datas na busca rápida."
 
         result = f"Voos de {origin} para {destination} (Ida: {date}"
         if return_date:
@@ -60,4 +64,4 @@ def get_flight_options(origin: str, destination: str, date: str, return_date: Op
         if isinstance(e, ValueError):
              raise e
         print(f"❌ Erro na API de voos: {e}")
-        raise Exception(f"Erro ao buscar voos com SerpApi: {str(e)}")
+        return f"Erro ao buscar informações de voos: {str(e)}"

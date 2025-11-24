@@ -2,7 +2,9 @@
 import os
 import serpapi
 from typing import Optional
+from functools import lru_cache
 
+@lru_cache(maxsize=32)
 def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -> str:
     """
     Busca hotéis reais via SerpApi (usando a nova sintaxe do cliente).
@@ -65,10 +67,8 @@ def get_hotel_options(city: str, check_in: str, check_out: str, budget: float) -
         try:
             return _search_hotels_generic(city, check_in, check_out, budget, api_key)
         except Exception as generic_e:
-            # Se a busca genérica também falhar, levanta o erro
             print(f"❌ Erro na busca genérica de fallback: {generic_e}")
-            raise Exception(f"Erro ao buscar hotéis (falha na API primária e no fallback): {generic_e}")
-
+            return f"Não foi possível encontrar hotéis no momento."
 
 def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: float, api_key: str) -> str:
     """Função de fallback para busca genérica de hotéis."""
@@ -90,7 +90,7 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
         organic_results = results.get("organic_results", [])
         
         if not organic_results:
-             raise Exception(f"Nenhum hotel encontrado para {city} com esses filtros (fallback).")
+             return "Nenhum hotel encontrado na busca genérica."
 
         result = f"Opções de hotéis em {city} (busca genérica):\n"
         for item in organic_results[:5]:
@@ -99,6 +99,4 @@ def _search_hotels_generic(city: str, check_in: str, check_out: str, budget: flo
             result += f"- {title}\n  🔗 {link}\n"
         return result
     except Exception as e:
-        if isinstance(e, ValueError):
-             raise e
         raise Exception(f"Erro na busca genérica de hotéis: {e}")

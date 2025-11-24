@@ -11,3 +11,4 @@ tools:
   - hotels.get_hotel_options
   - recommendations.get_recommendations
   - weather.get_historical_average_weather
+  - images.get_destination_images
