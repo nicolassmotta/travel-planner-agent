@@ -12,6 +12,13 @@ import { useToast } from "@/hooks/use-toast";
 
 const today = new Date().toISOString().split('T')[0];
 
+// --- MELHORIA 1: Tags para preenchimento rápido ---
+const INTEREST_TAGS = [
+  "Praia 🏖️", "História 🏛️", "Gastronomia 🍷", "Natureza 🌲", 
+  "Aventura 🧗", "Relaxamento 🧘", "Compras 🛍️", "Vida Noturna 🎉",
+  "Museus 🖼️", "Família 👨‍👩‍👧‍👦"
+];
+
 const formSchema = z.object({
   origin: z.string().min(2, "Informe a cidade de origem"),
   destination: z.string().min(2, "Informe o destino"),
@@ -61,7 +68,8 @@ const TravelForm = ({
     register,
     handleSubmit,
     formState: { errors },
-    watch
+    watch,
+    setValue // Adicionado para permitir atualização via botões
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
@@ -76,6 +84,7 @@ const TravelForm = ({
   });
 
   const departureDate = watch("departureDate");
+  const currentPreferences = watch("preferences"); // Observar para adicionar vírgula corretamente
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
@@ -135,6 +144,15 @@ const TravelForm = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Função auxiliar para adicionar tags
+  const handleAddTag = (tag: string) => {
+    const separator = currentPreferences && currentPreferences.length > 0 ? ", " : "";
+    setValue("preferences", currentPreferences + separator + tag, { 
+      shouldValidate: true, 
+      shouldDirty: true 
+    });
   };
 
   return (
@@ -305,6 +323,27 @@ const TravelForm = ({
                 {...register("preferences")}
                 className="mt-1.5 resize-none"
               />
+              
+              {/* --- Início das Tags Rápidas --- */}
+              <div className="mt-3">
+                <p className="text-xs text-muted-foreground mb-2">Sugestões rápidas (clique para adicionar):</p>
+                <div className="flex flex-wrap gap-2">
+                  {INTEREST_TAGS.map((tag) => (
+                    <Button
+                      key={tag}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs bg-background hover:bg-primary/10 hover:text-primary border-dashed"
+                      onClick={() => handleAddTag(tag)}
+                    >
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {/* --- Fim das Tags Rápidas --- */}
+
               {errors.preferences && (
                 <p className="text-sm text-destructive mt-1">{errors.preferences.message}</p>
               )}

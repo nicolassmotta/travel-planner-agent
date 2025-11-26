@@ -8,3 +8,7 @@ uvicorn[standard]
 google-adk
 weasyprint
 markdown-it-py
+sqlalchemy       
+passlib[bcrypt]    
+python-jose[cryptography] 
+multipart          
