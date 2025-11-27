@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const today = new Date().toISOString().split('T')[0];
 
-// --- MELHORIA 1: Tags para preenchimento rápido ---
+// Tags para preenchimento rápido
 const INTEREST_TAGS = [
   "Praia 🏖️", "História 🏛️", "Gastronomia 🍷", "Natureza 🌲", 
   "Aventura 🧗", "Relaxamento 🧘", "Compras 🛍️", "Vida Noturna 🎉",
@@ -69,7 +69,7 @@ const TravelForm = ({
     handleSubmit,
     formState: { errors },
     watch,
-    setValue // Adicionado para permitir atualização via botões
+    setValue
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
@@ -84,24 +84,31 @@ const TravelForm = ({
   });
 
   const departureDate = watch("departureDate");
-  const currentPreferences = watch("preferences"); // Observar para adicionar vírgula corretamente
+  const currentPreferences = watch("preferences");
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true);
     setTravelPlan(null);
     
     let fullPlan = ""; 
-
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const token = localStorage.getItem("token"); // Pega o token salvo
 
     try {
       const response = await fetch(`${apiUrl}/generate-plan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}` // Cabeçalho de Autorização!
         },
         body: JSON.stringify(data),
       });
+
+      if (response.status === 401) {
+        toast({ title: "Sessão Expirada", description: "Por favor, faça login novamente.", variant: "destructive" });
+        window.location.href = "/login";
+        return;
+      }
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -117,22 +124,14 @@ const TravelForm = ({
 
       while (true) {
         const { done, value } = await reader.read();
-        
-        if (done) {
-          break;
-        }
-        
+        if (done) break;
         const chunk = decoder.decode(value);
         fullPlan += chunk;
         setTravelPlan(fullPlan);
       }
 
       onPlanGenerated(fullPlan, data); 
-      
-      toast({
-        title: "Plano gerado com sucesso!",
-        description: "Confira seu itinerário personalizado ao lado",
-      });
+      toast({ title: "Plano gerado com sucesso!", description: "Confira seu itinerário personalizado ao lado" });
 
     } catch (error) {
       console.error("Erro ao gerar plano:", error);
@@ -171,6 +170,7 @@ const TravelForm = ({
             </div>
           ))}
         </div>
+
         {step === 1 && (
           <div className="space-y-4 animate-in fade-in duration-300">
             <div>
