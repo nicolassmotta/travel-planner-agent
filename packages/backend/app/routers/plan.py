@@ -5,10 +5,10 @@ from fastapi.responses import StreamingResponse
 from google.adk.runners import Runner
 from google.genai import types
 import markdown_it
-from weasyprint import HTML, CSS
+# from weasyprint import HTML, CSS  <-- MANTENHA COMENTADO SE NÃO TIVER GTK INSTALADO
 
 from app import schemas, auth, models
-from app.agent import booking_integrator, session_service # Importa do novo arquivo agent.py
+from app.agent import booking_integrator, session_service
 
 router = APIRouter(tags=["Planning"])
 
@@ -51,6 +51,7 @@ async def stream_plan_response(request: schemas.TravelRequest, user_email: str) 
 @router.post("/generate-plan")
 async def generate_plan(
     request: schemas.TravelRequest, 
+    # ✅ AUTENTICAÇÃO REATIVADA: Agora exige login
     current_user: models.User = Depends(auth.get_current_user)
 ):
     return StreamingResponse(
@@ -59,26 +60,7 @@ async def generate_plan(
     )
 
 # --- PDF ---
-PDF_CSS = """
-@page { size: A4; margin: 2cm; }
-body { font-family: sans-serif; font-size: 11pt; line-height: 1.6; }
-h1 { font-size: 24pt; }
-h2 { font-size: 18pt; border-bottom: 1px solid #eaeaea; }
-a { color: #007bff; text-decoration: none; }
-"""
-
+# (Mantido simples para não quebrar sem GTK)
 @router.post("/download-plan")
 async def download_plan(request: schemas.PlanDownloadRequest):
-    try:
-        md = markdown_it.MarkdownIt()
-        html_content = md.render(request.plan)
-        full_html = f"<html><head><style>{PDF_CSS}</style></head><body>{html_content}</body></html>"
-        pdf_bytes = HTML(string=full_html).write_pdf()
-        
-        return Response(
-            content=pdf_bytes, 
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=plano-de-viagem.pdf"}
-        )
-    except Exception as e:
-        return Response(status_code=500, content=f"Erro ao gerar PDF: {e}")
+    return Response(content="PDF indisponível (Falta biblioteca GTK no servidor)", media_type="text/plain")

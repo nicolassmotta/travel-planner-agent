@@ -11,7 +11,7 @@ import Register from "@/pages/Register";
 
 const queryClient = new QueryClient();
 
-// Componente para proteger rotas privadas
+// ✅ PROTEÇÃO ATIVADA: Verifica se tem token
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -31,12 +31,13 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Rotas Privadas */}
+          {/* 🔒 Rotas Privadas (Protegidas pelo PrivateRoute) */}
           <Route path="/" element={
             <PrivateRoute>
               <Index />
             </PrivateRoute>
           } />
+          
           <Route path="/meus-planos" element={
             <PrivateRoute>
               <MyPlans />
