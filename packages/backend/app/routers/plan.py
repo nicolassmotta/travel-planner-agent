@@ -2,17 +2,28 @@ from datetime import datetime
 from typing import AsyncGenerator
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import StreamingResponse
-from google.adk.runners import Runner
-from google.genai import types
+# Tenta importar o runner, se falhar (sem SDK), evita crash total no import
+try:
+    from google.adk.runners import Runner
+    from google.genai import types
+except ImportError:
+    print("AVISO: Bibliotecas Google GenAI/ADK não encontradas. O endpoint de plano falhará se chamado.")
+    Runner = None
+    types = None
+
 import markdown_it
-# from weasyprint import HTML, CSS  <-- MANTENHA COMENTADO SE NÃO TIVER GTK INSTALADO
 
 from app import schemas, auth, models
-from app.agent import booking_integrator, session_service
+# Importa do novo arquivo agent.py que criamos para evitar erro de módulo faltando
+from app.agent import booking_integrator, session_service 
 
 router = APIRouter(tags=["Planning"])
 
 async def stream_plan_response(request: schemas.TravelRequest, user_email: str) -> AsyncGenerator[str, None]:
+    if not Runner:
+        yield "ERRO: Bibliotecas de IA não instaladas no servidor."
+        return
+
     APP_NAME = "travel_planner"
     USER_ID = user_email
     SESSION_ID = f"session_{datetime.now().timestamp()}" 
@@ -20,6 +31,8 @@ async def stream_plan_response(request: schemas.TravelRequest, user_email: str) 
     print(f"\n--- NOVA REQUISIÇÃO DE {user_email} ---")
 
     await session_service.create_session(app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID)
+    
+    # Inicializa o Runner com o agente importado
     runner = Runner(agent=booking_integrator, app_name=APP_NAME, session_service=session_service)
 
     final_return_date = request.returnDate if request.returnDate else request.departureDate
@@ -46,12 +59,13 @@ async def stream_plan_response(request: schemas.TravelRequest, user_email: str) 
     except Exception as e:
         yield f"\n\nERRO INTERNO DO SERVIDOR: {e}"
     finally:
-        await runner.close()
+        # Verifica se o método close existe antes de chamar (segurança)
+        if hasattr(runner, 'close'):
+            await runner.close()
 
 @router.post("/generate-plan")
 async def generate_plan(
     request: schemas.TravelRequest, 
-    # ✅ AUTENTICAÇÃO REATIVADA: Agora exige login
     current_user: models.User = Depends(auth.get_current_user)
 ):
     return StreamingResponse(
@@ -59,8 +73,6 @@ async def generate_plan(
         media_type="text/event-stream"
     )
 
-# --- PDF ---
-# (Mantido simples para não quebrar sem GTK)
 @router.post("/download-plan")
 async def download_plan(request: schemas.PlanDownloadRequest):
     return Response(content="PDF indisponível (Falta biblioteca GTK no servidor)", media_type="text/plain")

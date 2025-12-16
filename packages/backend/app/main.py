@@ -3,14 +3,17 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app import models, database
-from app.routers import auth, plan # Importa os roteadores
+from app.routers import auth, plan
 
-# Carrega variáveis
+# Carrega variáveis de ambiente
 load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# Aviso se a chave não estiver definida, mas não bloqueia a execução inicial (útil para debug)
 if not API_KEY:
-    raise RuntimeError("GOOGLE_API_KEY não definido no .env")
-os.environ["GOOGLE_API_KEY"] = API_KEY
+    print("AVISO: GOOGLE_API_KEY não definido no .env. Funcionalidades de IA falharão.")
+else:
+    os.environ["GOOGLE_API_KEY"] = API_KEY
 
 # Inicializa Banco de Dados
 models.Base.metadata.create_all(bind=database.engine)
@@ -21,7 +24,9 @@ app = FastAPI(title="Travel Planner API", version="1.0.0")
 # Configura CORS
 origins = [
     "http://localhost:8080",
+    "http://localhost:5173", # Vite default
     "http://127.0.0.1:8080",
+    "*" # Permite tudo para facilitar desenvolvimento (cuidado em produção)
 ]
 
 app.add_middleware(
@@ -36,7 +41,6 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(plan.router)
 
-# Endpoint de saúde simples
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
