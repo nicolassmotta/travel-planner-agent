@@ -95,7 +95,7 @@ SERPAPI_API_KEY=SUA_CHAVE_SERPAPI_AQUI
 Com o ambiente virtual ativado e o `.env` configurado, inicie o servidor FastAPI:
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 A API estará disponível em `http://localhost:8000/docs` para visualizar a documentação interativa do Swagger.
